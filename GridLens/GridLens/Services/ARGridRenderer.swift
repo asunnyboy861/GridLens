@@ -50,7 +50,11 @@ final class ARGridRenderer {
     }
 
     private func createGridEntity(for planeAnchor: ARPlaneAnchor, configuration: GridConfiguration) -> AnchorEntity {
+        #if targetEnvironment(simulator)
+        let anchorEntity = AnchorEntity(world: planeAnchor.transform)
+        #else
         let anchorEntity = AnchorEntity(anchor: planeAnchor)
+        #endif
 
         let gridSize = configuration.gridSize
         let extent = configuration.gridExtent

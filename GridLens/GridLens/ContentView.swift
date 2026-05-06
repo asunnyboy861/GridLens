@@ -10,12 +10,14 @@ struct ContentView: View {
     @State private var showSettings = false
     @State private var showPaywall = false
     @State private var showScreenshotFlash = false
+    @State private var arViewForCapture: ARView?
 
     var body: some View {
         ZStack {
             ARCameraView(
                 arViewModel: arViewModel,
-                gridViewModel: gridViewModel
+                gridViewModel: gridViewModel,
+                arView: $arViewForCapture
             )
             .ignoresSafeArea()
 
@@ -25,7 +27,8 @@ struct ContentView: View {
                 purchaseManager: purchaseManager,
                 showSettings: $showSettings,
                 showPaywall: $showPaywall,
-                showScreenshotFlash: $showScreenshotFlash
+                showScreenshotFlash: $showScreenshotFlash,
+                arViewForCapture: arViewForCapture
             )
 
             if showScreenshotFlash {

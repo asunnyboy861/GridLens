@@ -5,6 +5,7 @@ import RealityKit
 struct ARCameraView: UIViewRepresentable {
     var arViewModel: ARSessionViewModel
     var gridViewModel: GridViewModel
+    @Binding var arView: ARView?
 
     func makeUIView(context: Context) -> ARView {
         let arView = ARView(frame: .zero)
@@ -12,6 +13,9 @@ struct ARCameraView: UIViewRepresentable {
         context.coordinator.gridRenderer = gridRenderer
         arViewModel.configure(session: arView.session, gridRenderer: gridRenderer)
         arViewModel.startSession()
+        DispatchQueue.main.async {
+            self.arView = arView
+        }
         return arView
     }
 

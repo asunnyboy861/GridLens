@@ -8,7 +8,7 @@ struct ARCameraOverlay: View {
     @Binding var showSettings: Bool
     @Binding var showPaywall: Bool
     @Binding var showScreenshotFlash: Bool
-    @State private var arViewForCapture: ARView?
+    var arViewForCapture: ARView?
 
     var body: some View {
         VStack {

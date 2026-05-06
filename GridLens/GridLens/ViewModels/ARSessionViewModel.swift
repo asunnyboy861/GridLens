@@ -25,6 +25,11 @@ final class ARSessionViewModel: NSObject, ARSessionDelegate {
     }
 
     func startSession() {
+        #if targetEnvironment(simulator)
+        showPlaneSearchingHint = false
+        isSessionRunning = true
+        isPlaneDetected = true
+        #else
         guard ARWorldTrackingConfiguration.isSupported else {
             showUnsupportedDeviceAlert = true
             return
@@ -41,6 +46,7 @@ final class ARSessionViewModel: NSObject, ARSessionDelegate {
         session?.run(configuration)
         isSessionRunning = true
         showPlaneSearchingHint = true
+        #endif
     }
 
     func stopSession() {
