@@ -62,7 +62,7 @@ struct ContentView: View {
             Text(Constants.AR.unsupportedDeviceMessage)
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView(purchaseManager: purchaseManager)
+            SettingsView(purchaseManager: purchaseManager, showPaywall: $showPaywall)
         }
         .sheet(isPresented: $showPaywall) {
             PaywallView(purchaseManager: purchaseManager)

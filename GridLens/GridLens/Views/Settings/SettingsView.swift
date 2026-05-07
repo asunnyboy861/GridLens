@@ -3,6 +3,7 @@ import StoreKit
 
 struct SettingsView: View {
     var purchaseManager: PurchaseManager
+    @Binding var showPaywall: Bool
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -31,6 +32,9 @@ struct SettingsView: View {
                     } else {
                         Button("Upgrade to Premium") {
                             dismiss()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showPaywall = true
+                            }
                         }
                     }
 

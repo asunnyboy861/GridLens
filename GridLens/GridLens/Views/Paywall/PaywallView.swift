@@ -6,6 +6,8 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedTier: SubscriptionTier = .yearly
     @State private var isPurchasing = false
+    @State private var showErrorAlert = false
+    @State private var isRefreshing = false
 
     enum SubscriptionTier: String, CaseIterable {
         case monthly, yearly, lifetime
@@ -28,6 +30,38 @@ struct PaywallView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
 
+                    Text("3-Day Free Trial Available")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.green)
+                        .padding(.horizontal, 32)
+
+                    if purchaseManager.isLoading || isRefreshing {
+                        ProgressView("Loading subscription options...")
+                            .padding()
+                    }
+
+                    if let errorMessage = purchaseManager.errorMessage, !purchaseManager.isLoading {
+                        VStack(spacing: 12) {
+                            Text(errorMessage)
+                                .font(.subheadline)
+                                .foregroundStyle(.red)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+
+                            Button {
+                                isRefreshing = true
+                                Task {
+                                    await purchaseManager.loadProducts()
+                                    isRefreshing = false
+                                }
+                            } label: {
+                                Label("Retry", systemImage: "arrow.clockwise")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
+
                     VStack(spacing: 12) {
                         tierCard(.monthly)
                         tierCard(.yearly)
@@ -44,16 +78,16 @@ struct PaywallView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding()
                         } else {
-                            Text("Subscribe Now")
+                            Text(buttonText)
                                 .font(.headline)
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding()
                         }
                     }
-                    .background(Color.blue, in: RoundedRectangle(cornerRadius: 12))
+                    .background(buttonBackgroundColor, in: RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 20)
-                    .disabled(isPurchasing)
+                    .disabled(isPurchasing || !canPurchase || purchaseManager.isLoading)
 
                     Button {
                         Task {
@@ -98,7 +132,53 @@ struct PaywallView: View {
                     Button("Close") { dismiss() }
                 }
             }
+            .alert("Purchase Error", isPresented: $showErrorAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(purchaseManager.errorMessage ?? "An unknown error occurred.")
+            }
+            .onChange(of: purchaseManager.errorMessage) { _, newValue in
+                if newValue != nil {
+                    showErrorAlert = true
+                }
+            }
+            .onAppear {
+                if purchaseManager.products.isEmpty && !purchaseManager.isLoading {
+                    Task {
+                        await purchaseManager.loadProducts()
+                    }
+                }
+            }
         }
+    }
+
+    private var canPurchase: Bool {
+        switch selectedTier {
+        case .monthly: return purchaseManager.monthlyProduct != nil
+        case .yearly: return purchaseManager.yearlyProduct != nil
+        case .lifetime: return purchaseManager.lifetimeProduct != nil
+        }
+    }
+
+    private var buttonText: String {
+        if purchaseManager.isLoading {
+            return "Loading..."
+        }
+        if !canPurchase {
+            return "Unavailable"
+        }
+        switch selectedTier {
+        case .monthly:
+            return "Subscribe Monthly"
+        case .yearly:
+            return "Subscribe Yearly"
+        case .lifetime:
+            return "Buy Lifetime Access"
+        }
+    }
+
+    private var buttonBackgroundColor: Color {
+        canPurchase && !purchaseManager.isLoading ? .blue : .gray
     }
 
     private func tierCard(_ tier: SubscriptionTier) -> some View {
@@ -162,29 +242,32 @@ struct PaywallView: View {
     private func tierPrice(_ tier: SubscriptionTier) -> String {
         switch tier {
         case .monthly:
-            return purchaseManager.monthlyProduct?.displayPrice ?? "$4.99/month"
+            return purchaseManager.monthlyProduct?.displayPrice ?? "Loading..."
         case .yearly:
-            return purchaseManager.yearlyProduct?.displayPrice ?? "$29.99/year"
+            return purchaseManager.yearlyProduct?.displayPrice ?? "Loading..."
         case .lifetime:
-            return purchaseManager.lifetimeProduct?.displayPrice ?? "$59.99 once"
+            return purchaseManager.lifetimeProduct?.displayPrice ?? "Loading..."
         }
     }
 
     private func purchaseSelectedTier() {
+        let product: Product?
+        switch selectedTier {
+        case .monthly: product = purchaseManager.monthlyProduct
+        case .yearly: product = purchaseManager.yearlyProduct
+        case .lifetime: product = purchaseManager.lifetimeProduct
+        }
+
+        guard let product else {
+            purchaseManager.errorMessage = "Subscription products are not available. Please check your internet connection and try again."
+            return
+        }
+
         isPurchasing = true
         Task {
-            let product: Product?
-            switch selectedTier {
-            case .monthly: product = purchaseManager.monthlyProduct
-            case .yearly: product = purchaseManager.yearlyProduct
-            case .lifetime: product = purchaseManager.lifetimeProduct
-            }
-
-            if let product {
-                let success = await purchaseManager.purchase(product)
-                if success {
-                    dismiss()
-                }
+            let success = await purchaseManager.purchase(product)
+            if success {
+                dismiss()
             }
             isPurchasing = false
         }

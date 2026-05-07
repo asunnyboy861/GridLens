@@ -47,5 +47,8 @@ SUBSCRIPTION INFORMATION:
 - You can manage and cancel your subscriptions by going to your account settings on the App Store after purchase.
 - Any unused portion of a free trial period, if offered, will be forfeited when the user purchases a subscription.
 
+TERMS OF USE (EULA):
+By using GridLens, you agree to our Terms of Use. You can view the full Terms of Use at: https://asunnyboy861.github.io/GridLens/terms.html
+
 ## Keywords
 AR grid,ground overlay,AR measurement,grid camera,AR ruler,archaeology,construction,AR tool

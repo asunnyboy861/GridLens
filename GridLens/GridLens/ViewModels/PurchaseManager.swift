@@ -13,15 +13,15 @@ final class PurchaseManager {
     }
 
     var monthlyProduct: Product? {
-        products.first { $0.id == "com.zzoutuo.GridLens.monthly" }
+        products.first { $0.id == ProductID.monthly }
     }
 
     var yearlyProduct: Product? {
-        products.first { $0.id == "com.zzoutuo.GridLens.yearly" }
+        products.first { $0.id == ProductID.yearly }
     }
 
     var lifetimeProduct: Product? {
-        products.first { $0.id == "com.zzoutuo.GridLens.lifetime" }
+        products.first { $0.id == ProductID.lifetime }
     }
 
     private var transactionListener: Task<Void, Never>?
@@ -40,15 +40,19 @@ final class PurchaseManager {
 
     func loadProducts() async {
         isLoading = true
+        errorMessage = nil
         do {
             let storeProducts = try await Product.products(for: [
-                "com.zzoutuo.GridLens.monthly",
-                "com.zzoutuo.GridLens.yearly",
-                "com.zzoutuo.GridLens.lifetime"
+                ProductID.monthly,
+                ProductID.yearly,
+                ProductID.lifetime
             ])
             products = storeProducts.sorted { $0.price < $1.price }
+            if products.isEmpty {
+                errorMessage = "Unable to load subscription products. Please check your internet connection and try again."
+            }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = "Failed to load products: \(error.localizedDescription)"
         }
         isLoading = false
     }
@@ -65,12 +69,13 @@ final class PurchaseManager {
             case .userCancelled:
                 return false
             case .pending:
+                errorMessage = "Purchase is pending approval."
                 return false
             @unknown default:
                 return false
             }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = "Purchase failed: \(error.localizedDescription)"
             return false
         }
     }
@@ -80,7 +85,7 @@ final class PurchaseManager {
             try await AppStore.sync()
             await updatePurchasedProducts()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = "Restore failed: \(error.localizedDescription)"
         }
     }
 
@@ -88,12 +93,18 @@ final class PurchaseManager {
         Task.detached { [weak self] in
             for await result in Transaction.updates {
                 guard let self else { return }
-                do {
-                    let transaction = try self.checkVerified(result)
-                    await self.updatePurchasedProducts()
+                switch result {
+                case .verified(let transaction):
+                    _ = await MainActor.run {
+                        Task {
+                            await self.updatePurchasedProducts()
+                        }
+                    }
                     await transaction.finish()
-                } catch {
-                    self.errorMessage = error.localizedDescription
+                case .unverified:
+                    await MainActor.run {
+                        self.errorMessage = "Transaction verification failed."
+                    }
                 }
             }
         }
@@ -106,10 +117,14 @@ final class PurchaseManager {
                 let transaction = try checkVerified(result)
                 purchasedIDs.insert(transaction.productID)
             } catch {
-                errorMessage = error.localizedDescription
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                }
             }
         }
-        purchasedProductIDs = purchasedIDs
+        await MainActor.run {
+            self.purchasedProductIDs = purchasedIDs
+        }
     }
 
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {
@@ -124,4 +139,10 @@ final class PurchaseManager {
 
 enum StoreError: Error {
     case failedVerification
+}
+
+struct ProductID {
+    static let monthly = "com.zzoutuo.GridLens.monthly"
+    static let yearly = "com.zzoutuo.GridLens.yearly"
+    static let lifetime = "com.zzoutuo.GridLens.lifetime"
 }

@@ -4,9 +4,9 @@ enum Constants {
     static let appName = "GridLens"
     static let bundleId = "com.zzoutuo.GridLens"
     static let supportEmail = "support@zzoutuo.com"
-    static let privacyPolicyURL = "https://asunnyboy861.github.io/GridLens/privacy"
-    static let termsOfUseURL = "https://asunnyboy861.github.io/GridLens/terms"
-    static let supportURL = "https://asunnyboy861.github.io/GridLens/support"
+    static let privacyPolicyURL = "https://asunnyboy861.github.io/GridLens/privacy.html"
+    static let termsOfUseURL = "https://asunnyboy861.github.io/GridLens/terms.html"
+    static let supportURL = "https://asunnyboy861.github.io/GridLens/support.html"
 
     enum IAP {
         static let monthlyId = "com.zzoutuo.GridLens.monthly"
